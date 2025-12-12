@@ -575,22 +575,25 @@ async def ws_endpoint(websocket: WebSocket):
         while True:
             msg = await websocket.receive_text()
             
-            # === ОБРАБОТКА КОМАНД ===
-            if msg.startswith("/"):
-                await handle_command(msg, websocket, user_nick)
-                continue
+            # ... твой код ДО строки 596 ...
+            # (оставь весь существующий код здесь)
             
-            # === ОБРАБОТКА УСТАНОВКИ НИКА ===
-            if msg.startswith("/nick "):
-                new_nick = msg[6:].strip().lower()
-                old_nick = user_nick
-                user_nick = new_nick
-                user_nicks[websocket] = new_nick
+    except Exception as e:
+        print(f"Ошибка: {e}")
+    finally:
+        # Очистка при отключении
+        if websocket in clients:
+            clients.discard(websocket)
+        
+        if websocket in user_nicks:
+            nick = user_nicks[websocket]
+            active_users.discard(nick)
+            
+            if websocket == config.REAL_RUBAT_WEBSOCKET:
+                config.REAL_RUBAT_ONLINE = False
+                config.REAL_RUBAT_WEBSOCKET = None
                 
-                # Проверяем, это настоящая Рубать?
-                if new_nick == config.YOUR_NICK:
-                    if not config.REAL_RUBAT_ONLINE:
-                        # Ты первая, кто зашел как "рубать" - становишься настоящей
-                        config.REAL_RUBAT_ONLINE = True
-                        config.REAL_RUBAT_WEBSOCKET = websocket
-                        is_real_rubat = True
+                await broadcast("💨 НАСТОЯЩАЯ РУБАТЬ ПОКИНУЛА ЧАТ...")
+                await broadcast("🤖 Рубать-бот перезагружается...")
+            
+            del user_nicks[websocket]
