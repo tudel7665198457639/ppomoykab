@@ -124,10 +124,12 @@ async def ask_ai(message: str, context: list = None) -> str:
         messages.append({"role": "user", "content": message})
         
         # Выбор провайдера
+               # Выбор провайдера
         if config.CURRENT_PROVIDER == "deepseek":
             return await call_deepseek(messages)
-        elif config.CURRENT_PROVIDER == "openrouter":
-            return await call_openrouter(messages)
+        # Если других провайдеров пока нет, можно оставить закомментированно
+        # else:
+        #     raise ValueError(f"Unknown AI provider: {config.CURRENT_PROVIDER}")
             
     except Exception as e:
         print(f"Ошибка ИИ: {e}")
