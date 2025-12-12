@@ -1,0 +1,6 @@
+fastapi==0.104.1
+unicorn==0.24.0
+websockets==12.0
+aiohttp==3.9.1
+httpx==0.25.2
+python-dotenv==1.00
