@@ -35,8 +35,11 @@ keywords_responses = {
 }
 
 # === НАСТРОЙКИ АВТООТВЕТЧИКА С ИИ ===
+# ... (ИМПОРТЫ И НАЧАЛО КОДА ОСТАВЛЯЕМ БЕЗ ИЗМЕНЕНИЙ, ДО КЛАССА AIConfig) ...
+
+# === НАСТРОЙКИ АВТООТВЕТЧИКА С ИИ ===
 class AIConfig:
-    # Твой стиль общения для ИИ (от женского лица)
+    # Твой стиль общения для ИИ (от женского лица) - УБРАЛ СМАЙЛИКИ
     YOUR_PERSONALITY = """Ты - девушка по имени рубать.
     Твой характер: саркастичная, острая на язык, но добрая внутри.
     Стиль общения: используешь мат, но с юмором.
@@ -47,16 +50,16 @@ class AIConfig:
     - "Блин,"
     - "Ебать,"
     - "Похуй, но интересно"
-    - "хвшарпвхрмоат"
     
     Примеры твоего общения:
     - "Привет, чмошник"
-    - "Аховарвх, ничтожество"
+    - "Ахахах, ничтожество"
     - "Иди нахуй, шутка)"
     - "Вообще похуй, но продолжай"
     - "Ой, мило"
     
     Отвечай коротко, 1-3 предложения. Не будь слишком формальной.
+    НИКОГДА не используй смайлики вроде 😂🤣😭😎🤔.
     """
     
     # Ник автоответчика и твой ник - ОДИНАКОВЫЕ!
@@ -65,16 +68,14 @@ class AIConfig:
     # Бесплатные ИИ API
     AI_PROVIDERS = {
         "deepseek": "https://api.deepseek.com/chat/completions",
-         
     }
     
     # Выбери провайдера
     CURRENT_PROVIDER = "deepseek"
     
-    # API ключи (получи бесплатно на сайтах)
+    # API ключи
     API_KEYS = {
         "deepseek": "sk-f4fb5b8681744aaeb8c6248d8daf06bc",
-      
     }
     
     # Настройки ответов
@@ -93,7 +94,6 @@ user_nicks = {} # websocket -> ник
 active_users = set()
 chat_history = []
 ai_enabled = True # ИИ включен по умолчанию
-real_rubat_id = None # ID твоего реального подключения
 
 # === ФУНКЦИЯ ДЛЯ ОБЩЕНИЯ С ИИ ===
 async def ask_ai(message: str, context: list = None) -> str:
@@ -124,12 +124,9 @@ async def ask_ai(message: str, context: list = None) -> str:
         messages.append({"role": "user", "content": message})
         
         # Выбор провайдера
-               # Выбор провайдера
         if config.CURRENT_PROVIDER == "deepseek":
             return await call_deepseek(messages)
-        # Если других провайдеров пока нет, можно оставить закомментированно
-        # else:
-        #     raise ValueError(f"Unknown AI provider: {config.CURRENT_PROVIDER}")
+        # Убрал вызов несуществующей функции call_openrouter
             
     except Exception as e:
         print(f"Ошибка ИИ: {e}")
@@ -164,19 +161,19 @@ async def call_deepseek(messages: list) -> str:
                 raise Exception(f"DeepSeek error: {response.status}")
 
 async def fallback_response(message: str) -> str:
-    """Запасные ответы в твоем стиле (от женского лица)"""
+    """Запасные ответы в твоем стиле (от женского лица) - УБРАЛ СМАЙЛИКИ"""
     message_lower = message.lower()
     
     # Ответы в твоем стиле
     responses = {
-        "привет": ["Здарова, чмошник!", "Приветик, епта!", "О, еще один мудак приполз", "Хай, кожанный мешок!"],
-        "как дела": ["Норм, пашу", "Похуй, как обычно", "Живая пока, спасибо", "Терпимо, ты как?"],
+        "привет": ["Здарова, чмошник", "Приветик, епта", "О, еще один мудак приполз", "Хай, кожанный мешок"],
+        "как дела": ["Норм, пашу", "Похуй, как обычно", "Живая пока, спасибо", "Терпимо, ты как"],
         "что делаешь": ["Сосу хуй в углу", "Туплю тут", "Ничего, скучаю по тебе", "Отвечаю на твои тупые сообщения"],
-        "пока": ["Иди нахуй", "Съебался наконец", "Бывай, ничтожество", "Пока, чмо!"],
-        "люблю": ["Иди нахуй, педик", "Я тоже... шутка)", "Пошел в пизду, романтик", "Бля, ну и ладно"],
-        "хочу": ["Хотеть не вредно", "Мечтать не запретишь", "И чё?", "Ну и хуй с тобой"],
-        "рубать": ["Чего зовешь?", "Я тут, чё надо?", "Рубать на связи!", "Опять меня вспомнили?"],
-        "бот": ["Я не бот, я личность!", "Сам ты бот", "Блять, опять про бота", "Я живая, епта!"],
+        "пока": ["Иди нахуй", "Съебался наконец", "Бывай, ничтожество", "Пока, чмо"],
+        "люблю": ["Иди нахуй, педик", "Я тоже... шутка", "Пошел в пизду, романтик", "Бля, ну и ладно"],
+        "хочу": ["Хотеть не вредно", "Мечтать не запретишь", "И чё", "Ну и хуй с тобой"],
+        "рубать": ["Чего зовешь", "Я тут, чё надо", "Рубать на связи", "Опять меня вспомнили"],
+        "бот": ["Я не бот, я личность", "Сам ты бот", "Блять, опять про бота", "Я живая, епта"],
     }
     
     # Проверяем ключевые слова
@@ -197,18 +194,75 @@ async def fallback_response(message: str) -> str:
         "Мда, ну ты и мудак",
         "Поняла тебя, еблан",
         "Ахахах, ну ты даешь",
-        "Блин, серьезно?",
-        "Ой всё",
+        "Блин, серьезно",
+        "Ой все",
         "Ну и хуй с ним",
         "Чет скучно",
         "Продолжай, мне нра",
-        "И чё дальше?",
+        "И чё дальше",
         "Мне похуй, но продолжай",
         "Интересно, расскажи еще",
-        "Ты дебил или прикидываешься?",
+        "Ты дебил или прикидываешься",
     ]
     
     return random.choice(general_responses)
+
+# === ОСНОВНЫЕ ФУНКЦИИ ДЛЯ РАБОТЫ ЧАТА ===
+async def broadcast(message: str):
+    """Отправить сообщение всем подключенным клиентам"""
+    disconnected = []
+    for client in clients:
+        try:
+            await client.send_text(message)
+        except:
+            disconnected.append(client)
+    
+    for client in disconnected:
+        clients.discard(client)
+        if client in user_nicks:
+            del user_nicks[client]
+
+async def handle_command(command: str, websocket, user_nick: str):
+    """Обработка команд от пользователей"""
+    global ai_enabled
+    
+    if command.startswith("/ai "):
+        # Команда управления ботом - ТОЛЬКО ДЛЯ НАСТОЯЩЕЙ РУБАТЬ
+        if websocket == config.REAL_RUBAT_WEBSOCKET:
+            if "on" in command:
+                ai_enabled = True
+                await broadcast("Автоответчик включен")
+            elif "off" in command:
+                ai_enabled = False
+                await broadcast("Автоответчик выключен")
+    
+    elif command == "/clear" and websocket == config.REAL_RUBAT_WEBSOCKET:
+        # Очистка чата - ТОЛЬКО ДЛЯ НАСТОЯЩЕЙ РУБАТЬ
+        await broadcast("Чат очищен")
+    
+    elif command == "/stats" and websocket == config.REAL_RUBAT_WEBSOCKET:
+        # Статистика - ТОЛЬКО ДЛЯ НАСТОЯЩЕЙ РУБАТЬ
+        stats_msg = f"Онлайн: {len(active_users)} | Сообщений: {len(chat_history)}"
+        await websocket.send_text(stats_msg)
+
+async def send_ai_response(user_message: str, sender_nick: str):
+    """Отправка ответа от автоответчика"""
+    try:
+        response = await ask_ai(user_message, chat_history)
+        ai_message = f"{config.YOUR_NICK}: {response}"
+        
+        # Сохраняем в историю
+        chat_history.append({
+            "time": datetime.now().strftime("%H:%M:%S"),
+            "nick": config.YOUR_NICK,
+            "message": response,
+            "is_ai": True
+        })
+        
+        # Отправляем всем
+        await broadcast(ai_message)
+    except Exception as e:
+        print(f"Ошибка при отправке ИИ: {e}")
 
 # === HTML СТРАНИЦА ===
 html = '''<!DOCTYPE html>
@@ -235,7 +289,6 @@ html = '''<!DOCTYPE html>
             font-size: 13px;
             z-index: 1000;
             border: 1px solid #0f0;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
         }
         
         #log {
@@ -249,29 +302,19 @@ html = '''<!DOCTYPE html>
         }
         
         .ai-message {
-            color: #ff66cc !important;
+            color: #ff66cc;
             font-style: italic;
-            opacity: 0.9;
         }
         
         .real-message {
-            color: #00ff00 !important;
+            color: #00ff00;
             font-weight: bold;
-            text-shadow: 0 0 5px #0f0;
         }
         
         .system-message {
             color: #666;
             font-size: 12px;
             font-style: italic;
-        }
-        
-        .highlight-message {
-            color: #ff9900;
-            background: #222;
-            padding: 5px;
-            border-radius: 3px;
-            margin: 5px 0;
         }
         
         input {
@@ -296,6 +339,7 @@ html = '''<!DOCTYPE html>
             background: #222;
             border-radius: 8px;
             border: 1px solid #333;
+            display: none; /* Скрыта по умолчанию */
         }
         
         button {
@@ -307,67 +351,22 @@ html = '''<!DOCTYPE html>
             cursor: pointer;
             font-family: 'Courier New';
             border-radius: 5px;
-            transition: all 0.3s;
-        }
-        
-        button:hover {
-            background: #444;
-            transform: translateY(-2px);
-            box-shadow: 0 0 10px #0f0;
-        }
-        
-        .hidden {
-            display: none;
-        }
-        
-        .admin-badge {
-            color: #ff0000;
-            font-weight: bold;
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-        
-        .message-time {
-            color: #666;
-            font-size: 11px;
-            margin-right: 10px;
-        }
-        
-        .message-container {
-            margin: 8px 0;
-            padding: 5px;
-            border-left: 3px solid transparent;
-        }
-        
-        .message-container.ai {
-            border-left-color: #ff66cc;
-        }
-        
-        .message-container.real {
-            border-left-color: #00ff00;
         }
     </style>
 </head>
 <body>
     <div id="status-bar">
-        <span id="status-icon">🤖</span>
         <span id="status-text">Рубать-бот активен</span>
     </div>
     
-    <h2>👹 идиотский ник ничтожества:</h2>
-    <input id="nick" placeholder="введи свой уебанский ник и жми Enter" autofocus>
+    <h2>идиотский ник ничтожества:</h2>
+    <input id="nick" placeholder="введи ник и Enter" autofocus>
     
-    <div id="controls" class="hidden">
-        <strong>🍺 Команды для своих:</strong><br>
-        <button onclick="toggleAI()">🤖 Вкл/Выкл бота</button>
-        <button onclick="forceAIResponse()">💥 Заставить ответить</button>
-        <button onclick="clearChat()">🗑️ Очистить помойку</button>
-        <button onclick="showStats()">📊 Статистика</button>
+    <div id="controls">
+        <strong>Команды для Рубать:</strong><br>
+        <button onclick="toggleAI()">Вкл/Выкл бота</button>
+        <button onclick="clearChat()">Очистить помойку</button>
+        <button onclick="showStats()">Статистика</button>
     </div>
     
     <div id="log"></div>
@@ -375,27 +374,18 @@ html = '''<!DOCTYPE html>
     
     <script>
         let nick = "чмо_" + Math.floor(Math.random() * 9999);
-        let aiEnabled = true;
         let isRealRubat = false;
         const ws = new WebSocket("wss://" + location.host + "/ws");
         const log = document.getElementById("log");
         const controls = document.getElementById('controls');
-        const statusIcon = document.getElementById('status-icon');
         const statusText = document.getElementById('status-text');
         
-        // Функции управления
+        // Функции управления - ВИДНЫ ТОЛЬКО РУБАТЬ
         function toggleAI() {
-            aiEnabled = !aiEnabled;
-            ws.send(`/ai ${aiEnabled ? 'on' : 'off'}`);
-            updateStatus();
-        }
-        
-        function forceAIResponse() {
-            ws.send('/ai_force');
+            ws.send('/ai toggle');
         }
         
         function clearChat() {
-            log.innerHTML = '';
             ws.send('/clear');
         }
         
@@ -405,157 +395,81 @@ html = '''<!DOCTYPE html>
         
         function updateStatus() {
             if (isRealRubat) {
-                statusIcon.textContent = '👑';
                 statusText.textContent = 'Настоящая Рубать в чате';
                 statusText.style.color = '#ff0000';
+                controls.style.display = 'block';
             } else {
-                statusIcon.textContent = aiEnabled ? '🤖' : '💀';
-                statusText.textContent = aiEnabled ? 'Рубать-бот активен' : 'Рубать-бот отключен';
-                statusText.style.color = aiEnabled ? '#0f0' : '#f00';
+                statusText.textContent = 'Рубать-бот активен';
+                statusText.style.color = '#0f0';
+                controls.style.display = 'none';
             }
         }
         
         // Обработка WebSocket
         ws.onopen = () => {
-            addSystemMessage('✅ подключился к помойке...');
+            addMessage('подключился, червь'); // ИЗМЕНИЛ ФРАЗУ
         };
         
         ws.onmessage = e => { 
             const data = e.data;
             
-            // Парсим JSON если это системное сообщение
-            try {
-                const parsed = JSON.parse(data);
-                if (parsed.type === 'system') {
-                    handleSystemMessage(parsed);
-                    return;
-                }
-            } catch {
-                // Это обычное текстовое сообщение
-            }
-            
-            // Проверяем специальные сообщения
-            if (data.includes('🔥 НАСТОЯЩАЯ РУБАТЬ ВОШЛА')) {
-                addHighlightMessage(data);
-                if (data.includes('бот уничтожен')) {
-                    aiEnabled = false;
-                }
-            } else if (data.includes('💀 АВТООТВЕТЧИК УНИЧТОЖЕН')) {
-                addHighlightMessage(data);
-                aiEnabled = false;
-            } else if (data.includes('👻 Рубать-бот активирован')) {
-                addHighlightMessage(data);
-                aiEnabled = true;
-            } else if (data.includes('рубать:') && data.includes('(бот)')) {
-                // Сообщение от бота
-                addAIMessage(data.replace('(бот)', ''));
-            } else if (data.includes('рубать:') && !data.includes('(бот)')) {
-                // Сообщение от настоящей Рубать
-                addRealMessage(data);
+            // Системные сообщения о смене статуса
+            if (data.includes('НАСТОЯЩАЯ РУБАТЬ ВОШЛА')) {
+                isRealRubat = true;
+                updateStatus();
+                addMessage(data);
+            } else if (data.includes('Рубать-бот активирован')) {
+                isRealRubat = false;
+                updateStatus();
+                addMessage(data);
             } else {
-                // Обычное сообщение
+                // Обычные сообщения
                 addMessage(data);
             }
             
-            updateStatus();
             log.scrollTop = log.scrollHeight;
         };
         
-        function handleSystemMessage(msg) {
-            switch(msg.subtype) {
-                case 'rubat_online':
-                    isRealRubat = true;
-                    controls.classList.remove('hidden');
-                    addHighlightMessage(`👑 <span class="admin-badge">НАСТОЯЩАЯ РУБАТЬ В ЧАТЕ!</span>`);
-                    break;
-                case 'rubat_offline':
-                    isRealRubat = false;
-                    addHighlightMessage(`👻 <span class="admin-badge">Рубать-бот активирован</span>`);
-                    break;
-                case 'stats':
-                    addSystemMessage(`📊 Статистика: ${msg.data}`);
-                    break;
-            }
-            updateStatus();
-        }
-        
         function addMessage(text) {
-            const container = document.createElement('div');
-            container.className = 'message-container';
-            container.innerHTML = `<span class="message-time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span> ${text}`;
-            log.appendChild(container);
-        }
-        
-        function addAIMessage(text) {
-            const container = document.createElement('div');
-            container.className = 'message-container ai';
-            container.innerHTML = `<span class="message-time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span> <span class="ai-message">${text}</span>`;
-            log.appendChild(container);
-        }
-        
-        function addRealMessage(text) {
-            const container = document.createElement('div');
-            container.className = 'message-container real';
-            container.innerHTML = `<span class="message-time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span> <span class="real-message">${text}</span>`;
-            log.appendChild(container);
-        }
-        
-        function addSystemMessage(text) {
-            const container = document.createElement('div');
-            container.className = 'message-container';
-            container.innerHTML = `<span class="system-message">${text}</span>`;
-            log.appendChild(container);
-        }
-        
-        function addHighlightMessage(text) {
-            const container = document.createElement('div');
-            container.className = 'message-container';
-            container.innerHTML = `<div class="highlight-message">${text}</div>`;
-            log.appendChild(container);
+            const div = document.createElement('div');
+            
+            // Определяем тип сообщения по содержанию
+            if (text.includes('рубать:') && !text.includes('НАСТОЯЩАЯ')) {
+                div.className = 'ai-message';
+            } else if (text.includes('рубать:')) {
+                div.className = 'real-message';
+            } else if (text.includes('подключился') || text.includes('вышел') || text.includes('очищен') || text.includes('Автоответчик')) {
+                div.className = 'system-message';
+            }
+            
+            div.innerHTML = text;
+            log.appendChild(div);
         }
         
         // Обработка ввода ника
         document.getElementById("nick").addEventListener("keydown", e => {
             if (e.key === "Enter") {
-                if (e.target.value.trim()) {
-                    nick = e.target.value.trim().toLowerCase();
-                    
-                    // Если ввели "рубать" - показываем предупреждение
-                    if (nick === 'рубать' || nick === 'рубать ') {
-                        addSystemMessage('⚠️ Внимание! Если ты настоящая Рубать, ты займешь трон. Если нет - получишь пизды.');
-                    }
-                }
-                
+                if (e.target.value.trim()) nick = e.target.value.trim().toLowerCase();
                 e.target.disabled = true;
                 document.getElementById("msg").disabled = false;
                 document.getElementById("msg").focus();
                 
-                // Показываем панель управления
-                controls.classList.remove('hidden');
-                
                 // Отправляем информацию о подключении
                 ws.send(`/nick ${nick}`);
-                
-                addSystemMessage(`🐒 ты теперь — <strong>${nick}</strong>`);
+                addMessage(`ты теперь — ${nick}`);
             }
         });
         
         // Обработка сообщений
         document.getElementById("msg").addEventListener("keydown", e => {
             if (e.key === "Enter" && e.target.value.trim()) {
-                ws.send(nick + ": " + e.target.value);
+                ws.send(`${nick}: ${e.target.value}`);
                 e.target.value = "";
             }
         });
         
         // Инициализация
         updateStatus();
-        
-        // Показываем правила при загрузке
-        setTimeout(() => {
-            addSystemMessage('🔞 Добро пожаловать в помойку! Правила: нет правил.');
-            addSystemMessage('💡 Совет: напиши "рубать" в поле ника чтобы занять трон.');
-        }, 1000);
     </script>
 </body>
 </html>'''
@@ -568,20 +482,76 @@ async def root():
 async def ws_endpoint(websocket: WebSocket):
     await websocket.accept()
     clients.add(websocket)
-    await websocket.send_text(random.choice(status_messages))
     
     user_nick = None
     is_real_rubat = False
     
     try:
+        # Отправляем приветствие
+        await websocket.send_text(random.choice(status_messages))
+        
         while True:
-            msg = await websocket.receive_text()
+            # Получаем сообщение
+            data = await websocket.receive_text()
             
-            # ... твой код ДО строки 596 ...
-            # (оставь весь существующий код здесь)
+            # Обработка команды /nick
+            if data.startswith("/nick "):
+                new_nick = data[6:].strip().lower()
+                old_nick = user_nick
+                user_nick = new_nick
+                user_nicks[websocket] = new_nick
+                
+                # Проверяем, это настоящая Рубать?
+                if new_nick == config.YOUR_NICK and not config.REAL_RUBAT_ONLINE:
+                    # Первый, кто зашел как "рубать" - становится настоящей
+                    config.REAL_RUBAT_ONLINE = True
+                    config.REAL_RUBAT_WEBSOCKET = websocket
+                    is_real_rubat = True
+                    
+                    # Отправляем всем сообщение
+                    await broadcast("НАСТОЯЩАЯ РУБАТЬ ВОШЛА В ЧАТ. АВТООТВЕТЧИК ОТКЛЮЧЕН.")
+                    
+                elif new_nick == config.YOUR_NICK and config.REAL_RUBAT_ONLINE:
+                    # Кто-то пытается зайти как "рубать", но место занято
+                    await websocket.send_text("Место Рубать уже занято. Выбери другой ник.")
+                    user_nick = f"подделка_{random.randint(1000, 9999)}"
+                    user_nicks[websocket] = user_nick
+                
+                active_users.add(user_nick)
+                if old_nick:
+                    active_users.discard(old_nick)
             
+            # Обработка команд
+            elif data.startswith("/"):
+                await handle_command(data, websocket, user_nick)
+            
+            # Обработка обычных сообщений
+            elif ": " in data:
+                nick, message = data.split(": ", 1)
+                
+                # Сохраняем в историю
+                chat_history.append({
+                    "time": datetime.now().strftime("%H:%M:%S"),
+                    "nick": nick,
+                    "message": message,
+                    "is_ai": False
+                })
+                
+                # Отправляем сообщение всем
+                await broadcast(data)
+                
+                # Если это не настоящая Рубать и она не в сети - возможен ответ от бота
+                if not config.REAL_RUBAT_ONLINE and ai_enabled and nick != config.YOUR_NICK:
+                    if random.random() < config.CHANCE_TO_REPLY:
+                        await asyncio.sleep(config.RESPONSE_DELAY)
+                        await send_ai_response(message, nick)
+            
+            # Обработка сообщений без ника (например, от системы)
+            else:
+                await broadcast(data)
+                
     except Exception as e:
-        print(f"Ошибка: {e}")
+        print(f"Ошибка в WebSocket: {e}")
     finally:
         # Очистка при отключении
         if websocket in clients:
@@ -591,14 +561,16 @@ async def ws_endpoint(websocket: WebSocket):
             nick = user_nicks[websocket]
             active_users.discard(nick)
             
+            # Если это была настоящая Рубать
             if websocket == config.REAL_RUBAT_WEBSOCKET:
                 config.REAL_RUBAT_ONLINE = False
                 config.REAL_RUBAT_WEBSOCKET = None
                 
-                await broadcast("💨 НАСТОЯЩАЯ РУБАТЬ ПОКИНУЛА ЧАТ...")
-                await broadcast("🤖 Рубать-бот перезагружается...")
+                await broadcast("НАСТОЯЩАЯ РУБАТЬ ПОКИНУЛА ЧАТ.")
+                await broadcast("Рубать-бот активирован.")
             
             del user_nicks[websocket]
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
