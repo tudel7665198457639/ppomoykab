@@ -10,6 +10,7 @@ import aiohttp
 import json
 
 app = FastAPI()
+# Разрешаем WebSocket с любого места (важно для Render)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -34,8 +35,11 @@ keywords_responses = {
 }
 
 # === НАСТРОЙКИ АВТООТВЕТЧИКА С ИИ ===
+# ... (ИМПОРТЫ И НАЧАЛО КОДА ОСТАВЛЯЕМ БЕЗ ИЗМЕНЕНИЙ, ДО КЛАССА AIConfig) ...
+
+# === НАСТРОЙКИ АВТООТВЕТЧИКА С ИИ ===
 class AIConfig:
-    # Твой стиль общения для ИИ
+    # Твой стиль общения для ИИ (от женского лица) - УБРАЛ СМАЙЛИКИ
     YOUR_PERSONALITY = """Ты - девушка по имени рубать.
     Твой характер: саркастичная, острая на язык, но добрая внутри.
     Стиль общения: используешь мат, но с юмором.
@@ -58,42 +62,45 @@ class AIConfig:
     НИКОГДА не используй смайлики вроде 😂🤣😭😎🤔.
     """
     
-    # Ник автоответчика и твой ник
-    YOUR_NICK = "рубать"
+    # Ник автоответчика и твой ник - ОДИНАКОВЫЕ!
+    YOUR_NICK = "рубать" # И автоответчик, и ты будешь под этим ником
     
-    # DeepSeek API
-    DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
-    DEEPSEEK_KEY = "sk-94abb7f70900428782c23f19d01b0dde"  # ⚠️ ЗАМЕНИ ЭТО!
+    # Бесплатные ИИ API
+    AI_PROVIDERS = {
+        "deepseek": "https://api.deepseek.com/chat/completions",
+    }
+    
+    # Выбери провайдера
+    CURRENT_PROVIDER = "deepseek"
+    
+    # API ключи
+    API_KEYS = {
+        "deepseek": "sk-f4fb5b8681744aaeb8c6248d8daf06bc",
+    }
     
     # Настройки ответов
-    RESPONSE_DELAY = 1.8
-    CHANCE_TO_REPLY = 0.6
+    RESPONSE_DELAY = 1.8 # Задержка ответа
+    CHANCE_TO_REPLY = 0.7 # Шанс ответа 70%
     
     # Состояние
-    REAL_RUBAT_ONLINE = False
-    REAL_RUBAT_WEBSOCKET = None
-    AI_ENABLED = True
+    REAL_RUBAT_ONLINE = False # Ты (настоящая) в сети?
+    REAL_RUBAT_WEBSOCKET = None # Твой websocket
 
 config = AIConfig()
 
 # Глобальные переменные
 clients = set()
-user_nicks = {}
+user_nicks = {} # websocket -> ник
 active_users = set()
 chat_history = []
+ai_enabled = True # ИИ включен по умолчанию
 
 # === ФУНКЦИЯ ДЛЯ ОБЩЕНИЯ С ИИ ===
 async def ask_ai(message: str, context: list = None) -> str:
     """Отправляет сообщение ИИ и получает ответ в твоем стиле"""
     
-    # Сначала проверяем ключевые слова
-    message_lower = message.lower()
-    for keyword, response in keywords_responses.items():
-        if keyword in message_lower:
-            return response
-    
-    # Если нет ключевого слова, используем DeepSeek
-    if not config.DEEPSEEK_KEY or config.DEEPSEEK_KEY == "sk-тут_твой_ключ":
+    # Если ИИ выключен или нет ключа, используем запасной вариант
+    if not config.API_KEYS[config.CURRENT_PROVIDER] or not ai_enabled:
         return await fallback_response(message)
     
     try:
@@ -106,9 +113,9 @@ async def ask_ai(message: str, context: list = None) -> str:
         ]
         
         # Добавляем историю (последние 5 сообщений)
-        if chat_history:
+        if context and len(chat_history) > 1:
             for msg in chat_history[-5:]:
-                if msg.get("nick") == config.YOUR_NICK:
+                if msg.get("is_ai", False):
                     messages.append({"role": "assistant", "content": msg["message"]})
                 else:
                     messages.append({"role": "user", "content": f"{msg['nick']}: {msg['message']}"})
@@ -116,52 +123,46 @@ async def ask_ai(message: str, context: list = None) -> str:
         # Текущее сообщение
         messages.append({"role": "user", "content": message})
         
-        # Вызов DeepSeek API
-        headers = {
-            "Authorization": f"Bearer {config.DEEPSEEK_KEY}",
-            "Content-Type": "application/json"
-        }
-        
-        data = {
-            "model": "deepseek-chat",
-            "messages": messages,
-            "max_tokens": 150,
-            "temperature": 0.8,
-            "stream": False
-        }
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                config.DEEPSEEK_URL,
-                headers=headers,
-                json=data,
-                timeout=10
-            ) as response:
-                if response.status == 200:
-                    result = await response.json()
-                    ai_response = result["choices"][0]["message"]["content"].strip()
-                    
-                    # Чистим ответ если нужно
-                    if "рубать:" in ai_response.lower():
-                        ai_response = ai_response.split(":", 1)[-1].strip()
-                    
-                    return ai_response if ai_response else await fallback_response(message)
-                else:
-                    print(f"DeepSeek error: {response.status}")
-                    return await fallback_response(message)
-                    
+        # Выбор провайдера
+        if config.CURRENT_PROVIDER == "deepseek":
+            return await call_deepseek(messages)
+        # Убрал вызов несуществующей функции call_openrouter
+            
     except Exception as e:
         print(f"Ошибка ИИ: {e}")
         return await fallback_response(message)
 
-async def fallback_response(message: str) -> str:
-    """Запасные ответы в твоем стиле"""
-    message_lower = message.lower()
+async def call_deepseek(messages: list) -> str:
+    """Вызов DeepSeek API"""
+    headers = {
+        "Authorization": f"Bearer {config.API_KEYS['deepseek']}",
+        "Content-Type": "application/json"
+    }
     
-    # Проверяем ключевые слова еще раз (на всякий случай)
-    for keyword, response in keywords_responses.items():
-        if keyword in message_lower:
-            return response
+    data = {
+        "model": "deepseek-chat",
+        "messages": messages,
+        "max_tokens": 150,
+        "temperature": 0.8,
+        "stream": False
+    }
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            config.AI_PROVIDERS["deepseek"],
+            headers=headers,
+            json=data,
+            timeout=10
+        ) as response:
+            if response.status == 200:
+                result = await response.json()
+                return result["choices"][0]["message"]["content"].strip()
+            else:
+                raise Exception(f"DeepSeek error: {response.status}")
+
+async def fallback_response(message: str) -> str:
+    """Запасные ответы в твоем стиле (от женского лица) - УБРАЛ СМАЙЛИКИ"""
+    message_lower = message.lower()
     
     # Ответы в твоем стиле
     responses = {
@@ -223,16 +224,16 @@ async def broadcast(message: str):
 
 async def handle_command(command: str, websocket, user_nick: str):
     """Обработка команд от пользователей"""
-    global config
+    global ai_enabled
     
     if command.startswith("/ai "):
         # Команда управления ботом - ТОЛЬКО ДЛЯ НАСТОЯЩЕЙ РУБАТЬ
         if websocket == config.REAL_RUBAT_WEBSOCKET:
             if "on" in command:
-                config.AI_ENABLED = True
+                ai_enabled = True
                 await broadcast("Автоответчик включен")
             elif "off" in command:
-                config.AI_ENABLED = False
+                ai_enabled = False
                 await broadcast("Автоответчик выключен")
     
     elif command == "/clear" and websocket == config.REAL_RUBAT_WEBSOCKET:
@@ -338,7 +339,7 @@ html = '''<!DOCTYPE html>
             background: #222;
             border-radius: 8px;
             border: 1px solid #333;
-            display: none;
+            display: none; /* Скрыта по умолчанию */
         }
         
         button {
@@ -379,7 +380,7 @@ html = '''<!DOCTYPE html>
         const controls = document.getElementById('controls');
         const statusText = document.getElementById('status-text');
         
-        // Функции управления
+        // Функции управления - ВИДНЫ ТОЛЬКО РУБАТЬ
         function toggleAI() {
             ws.send('/ai toggle');
         }
@@ -406,7 +407,7 @@ html = '''<!DOCTYPE html>
         
         // Обработка WebSocket
         ws.onopen = () => {
-            addMessage('подключился, червь');
+            addMessage('подключился, червь'); // ИЗМЕНИЛ ФРАЗУ
         };
         
         ws.onmessage = e => { 
@@ -432,6 +433,7 @@ html = '''<!DOCTYPE html>
         function addMessage(text) {
             const div = document.createElement('div');
             
+            // Определяем тип сообщения по содержанию
             if (text.includes('рубать:') && !text.includes('НАСТОЯЩАЯ')) {
                 div.className = 'ai-message';
             } else if (text.includes('рубать:')) {
@@ -539,12 +541,12 @@ async def ws_endpoint(websocket: WebSocket):
                 await broadcast(data)
                 
                 # Если это не настоящая Рубать и она не в сети - возможен ответ от бота
-                if not config.REAL_RUBAT_ONLINE and config.AI_ENABLED and nick != config.YOUR_NICK:
+                if not config.REAL_RUBAT_ONLINE and ai_enabled and nick != config.YOUR_NICK:
                     if random.random() < config.CHANCE_TO_REPLY:
                         await asyncio.sleep(config.RESPONSE_DELAY)
                         await send_ai_response(message, nick)
             
-            # Обработка сообщений без ника
+            # Обработка сообщений без ника (например, от системы)
             else:
                 await broadcast(data)
                 
