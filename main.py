@@ -10,7 +10,6 @@ import aiohttp
 import json
 
 app = FastAPI()
-# Разрешаем WebSocket с любого места (важно для Render)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,7 +21,7 @@ app.add_middleware(
 status_messages = [
     "Server groans to life for scum.",
     "Waking up for worthless worms.",
-    "Preparing torment for trash.",
+    "Preparing torment for trush.",
     "Hell's gate opens for losers.",
     "Bootstrapping for bottom-feeders."
 ]
@@ -36,6 +35,7 @@ keywords_responses = {
 
 # === НАСТРОЙКИ АВТООТВЕТЧИКА С ИИ ===
 class AIConfig:
+    # Твой стиль общения для ИИ
     YOUR_PERSONALITY = """Ты - девушка по имени рубать.
     Твой характер: саркастичная, острая на язык, но добрая внутри.
     Стиль общения: используешь мат, но с юмором.
@@ -54,20 +54,25 @@ class AIConfig:
     - "Вообще похуй, но продолжай"
     - "Ой, мило"
     
-    Отвечай коротко, 1-3 предложения.
+    Отвечай коротко, 1-3 предложения. Не будь слишком формальной.
     НИКОГДА не используй смайлики вроде 😂🤣😭😎🤔.
     """
     
+    # Ник автоответчика и твой ник
     YOUR_NICK = "рубать"
     
+    # DeepSeek API
     DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
-    DEEPSEEK_KEY = "sk-твой_ключ_здесь"  # ЗАМЕНИ НА РЕАЛЬНЫЙ!
+    DEEPSEEK_KEY = "sk-94abb7f70900428782c23f19d01b0dde"  # ⚠️ ЗАМЕНИ ЭТО!
     
-    RESPONSE_DELAY = 1.5
+    # Настройки ответов
+    RESPONSE_DELAY = 1.8
     CHANCE_TO_REPLY = 0.6
     
+    # Состояние
     REAL_RUBAT_ONLINE = False
     REAL_RUBAT_WEBSOCKET = None
+    AI_ENABLED = True
 
 config = AIConfig()
 
@@ -76,16 +81,23 @@ clients = set()
 user_nicks = {}
 active_users = set()
 chat_history = []
-ai_enabled = True
 
 # === ФУНКЦИЯ ДЛЯ ОБЩЕНИЯ С ИИ ===
 async def ask_ai(message: str, context: list = None) -> str:
     """Отправляет сообщение ИИ и получает ответ в твоем стиле"""
     
-    if not config.DEEPSEEK_KEY or config.DEEPSEEK_KEY == "sk-твой_ключ_здесь":
+    # Сначала проверяем ключевые слова
+    message_lower = message.lower()
+    for keyword, response in keywords_responses.items():
+        if keyword in message_lower:
+            return response
+    
+    # Если нет ключевого слова, используем DeepSeek
+    if not config.DEEPSEEK_KEY or config.DEEPSEEK_KEY == "sk-тут_твой_ключ":
         return await fallback_response(message)
     
     try:
+        # Подготовка контекста
         messages = [
             {
                 "role": "system",
@@ -93,15 +105,18 @@ async def ask_ai(message: str, context: list = None) -> str:
             }
         ]
         
-        if context and len(chat_history) > 1:
+        # Добавляем историю (последние 5 сообщений)
+        if chat_history:
             for msg in chat_history[-5:]:
                 if msg.get("nick") == config.YOUR_NICK:
                     messages.append({"role": "assistant", "content": msg["message"]})
                 else:
                     messages.append({"role": "user", "content": f"{msg['nick']}: {msg['message']}"})
         
+        # Текущее сообщение
         messages.append({"role": "user", "content": message})
         
+        # Вызов DeepSeek API
         headers = {
             "Authorization": f"Bearer {config.DEEPSEEK_KEY}",
             "Content-Type": "application/json"
@@ -124,13 +139,13 @@ async def ask_ai(message: str, context: list = None) -> str:
             ) as response:
                 if response.status == 200:
                     result = await response.json()
-                    response_text = result["choices"][0]["message"]["content"].strip()
+                    ai_response = result["choices"][0]["message"]["content"].strip()
                     
-                    # Чистим ответ от мусора
-                    if response_text.startswith('"') and response_text.endswith('"'):
-                        response_text = response_text[1:-1]
+                    # Чистим ответ если нужно
+                    if "рубать:" in ai_response.lower():
+                        ai_response = ai_response.split(":", 1)[-1].strip()
                     
-                    return response_text
+                    return ai_response if ai_response else await fallback_response(message)
                 else:
                     print(f"DeepSeek error: {response.status}")
                     return await fallback_response(message)
@@ -143,6 +158,12 @@ async def fallback_response(message: str) -> str:
     """Запасные ответы в твоем стиле"""
     message_lower = message.lower()
     
+    # Проверяем ключевые слова еще раз (на всякий случай)
+    for keyword, response in keywords_responses.items():
+        if keyword in message_lower:
+            return response
+    
+    # Ответы в твоем стиле
     responses = {
         "привет": ["Здарова, чмошник", "Приветик, епта", "О, еще один мудак приполз", "Хай, кожанный мешок"],
         "как дела": ["Норм, пашу", "Похуй, как обычно", "Живая пока, спасибо", "Терпимо, ты как"],
@@ -154,10 +175,12 @@ async def fallback_response(message: str) -> str:
         "бот": ["Я не бот, я личность", "Сам ты бот", "Блять, опять про бота", "Я живая, епта"],
     }
     
+    # Проверяем ключевые слова
     for word, answer_list in responses.items():
         if word in message_lower:
             return random.choice(answer_list)
     
+    # Общие ответы в твоем стиле
     general_responses = [
         "Кстати, ты пидор",
         "Вообще похуй",
@@ -183,33 +206,41 @@ async def fallback_response(message: str) -> str:
     
     return random.choice(general_responses)
 
+# === ОСНОВНЫЕ ФУНКЦИИ ДЛЯ РАБОТЫ ЧАТА ===
 async def broadcast(message: str):
     """Отправить сообщение всем подключенным клиентам"""
-    for client in list(clients):
+    disconnected = []
+    for client in clients:
         try:
             await client.send_text(message)
         except:
-            clients.discard(client)
-            if client in user_nicks:
-                del user_nicks[client]
+            disconnected.append(client)
+    
+    for client in disconnected:
+        clients.discard(client)
+        if client in user_nicks:
+            del user_nicks[client]
 
 async def handle_command(command: str, websocket, user_nick: str):
     """Обработка команд от пользователей"""
-    global ai_enabled
+    global config
     
-    if command.startswith("/ai ") and websocket == config.REAL_RUBAT_WEBSOCKET:
-        if "on" in command:
-            ai_enabled = True
-            await broadcast("Автоответчик включен")
-        elif "off" in command:
-            ai_enabled = False
-            await broadcast("Автоответчик выключен")
+    if command.startswith("/ai "):
+        # Команда управления ботом - ТОЛЬКО ДЛЯ НАСТОЯЩЕЙ РУБАТЬ
+        if websocket == config.REAL_RUBAT_WEBSOCKET:
+            if "on" in command:
+                config.AI_ENABLED = True
+                await broadcast("Автоответчик включен")
+            elif "off" in command:
+                config.AI_ENABLED = False
+                await broadcast("Автоответчик выключен")
     
     elif command == "/clear" and websocket == config.REAL_RUBAT_WEBSOCKET:
+        # Очистка чата - ТОЛЬКО ДЛЯ НАСТОЯЩЕЙ РУБАТЬ
         await broadcast("Чат очищен")
-        chat_history.clear()
     
     elif command == "/stats" and websocket == config.REAL_RUBAT_WEBSOCKET:
+        # Статистика - ТОЛЬКО ДЛЯ НАСТОЯЩЕЙ РУБАТЬ
         stats_msg = f"Онлайн: {len(active_users)} | Сообщений: {len(chat_history)}"
         await websocket.send_text(stats_msg)
 
@@ -219,12 +250,15 @@ async def send_ai_response(user_message: str, sender_nick: str):
         response = await ask_ai(user_message, chat_history)
         ai_message = f"{config.YOUR_NICK}: {response}"
         
+        # Сохраняем в историю
         chat_history.append({
             "time": datetime.now().strftime("%H:%M:%S"),
             "nick": config.YOUR_NICK,
-            "message": response
+            "message": response,
+            "is_ai": True
         })
         
+        # Отправляем всем
         await broadcast(ai_message)
     except Exception as e:
         print(f"Ошибка при отправке ИИ: {e}")
@@ -345,6 +379,7 @@ html = '''<!DOCTYPE html>
         const controls = document.getElementById('controls');
         const statusText = document.getElementById('status-text');
         
+        // Функции управления
         function toggleAI() {
             ws.send('/ai toggle');
         }
@@ -369,6 +404,7 @@ html = '''<!DOCTYPE html>
             }
         }
         
+        // Обработка WebSocket
         ws.onopen = () => {
             addMessage('подключился, червь');
         };
@@ -376,6 +412,7 @@ html = '''<!DOCTYPE html>
         ws.onmessage = e => { 
             const data = e.data;
             
+            // Системные сообщения о смене статуса
             if (data.includes('НАСТОЯЩАЯ РУБАТЬ ВОШЛА')) {
                 isRealRubat = true;
                 updateStatus();
@@ -385,6 +422,7 @@ html = '''<!DOCTYPE html>
                 updateStatus();
                 addMessage(data);
             } else {
+                // Обычные сообщения
                 addMessage(data);
             }
             
@@ -406,6 +444,7 @@ html = '''<!DOCTYPE html>
             log.appendChild(div);
         }
         
+        // Обработка ввода ника
         document.getElementById("nick").addEventListener("keydown", e => {
             if (e.key === "Enter") {
                 if (e.target.value.trim()) nick = e.target.value.trim().toLowerCase();
@@ -413,11 +452,13 @@ html = '''<!DOCTYPE html>
                 document.getElementById("msg").disabled = false;
                 document.getElementById("msg").focus();
                 
+                // Отправляем информацию о подключении
                 ws.send(`/nick ${nick}`);
                 addMessage(`ты теперь — ${nick}`);
             }
         });
         
+        // Обработка сообщений
         document.getElementById("msg").addEventListener("keydown", e => {
             if (e.key === "Enter" && e.target.value.trim()) {
                 ws.send(`${nick}: ${e.target.value}`);
@@ -425,6 +466,7 @@ html = '''<!DOCTYPE html>
             }
         });
         
+        // Инициализация
         updateStatus();
     </script>
 </body>
@@ -443,25 +485,32 @@ async def ws_endpoint(websocket: WebSocket):
     is_real_rubat = False
     
     try:
+        # Отправляем приветствие
         await websocket.send_text(random.choice(status_messages))
         
         while True:
+            # Получаем сообщение
             data = await websocket.receive_text()
             
+            # Обработка команды /nick
             if data.startswith("/nick "):
                 new_nick = data[6:].strip().lower()
                 old_nick = user_nick
                 user_nick = new_nick
                 user_nicks[websocket] = new_nick
                 
+                # Проверяем, это настоящая Рубать?
                 if new_nick == config.YOUR_NICK and not config.REAL_RUBAT_ONLINE:
+                    # Первый, кто зашел как "рубать" - становится настоящей
                     config.REAL_RUBAT_ONLINE = True
                     config.REAL_RUBAT_WEBSOCKET = websocket
                     is_real_rubat = True
                     
+                    # Отправляем всем сообщение
                     await broadcast("НАСТОЯЩАЯ РУБАТЬ ВОШЛА В ЧАТ. АВТООТВЕТЧИК ОТКЛЮЧЕН.")
                     
                 elif new_nick == config.YOUR_NICK and config.REAL_RUBAT_ONLINE:
+                    # Кто-то пытается зайти как "рубать", но место занято
                     await websocket.send_text("Место Рубать уже занято. Выбери другой ник.")
                     user_nick = f"подделка_{random.randint(1000, 9999)}"
                     user_nicks[websocket] = user_nick
@@ -470,31 +519,39 @@ async def ws_endpoint(websocket: WebSocket):
                 if old_nick:
                     active_users.discard(old_nick)
             
+            # Обработка команд
             elif data.startswith("/"):
                 await handle_command(data, websocket, user_nick)
             
+            # Обработка обычных сообщений
             elif ": " in data:
                 nick, message = data.split(": ", 1)
                 
+                # Сохраняем в историю
                 chat_history.append({
                     "time": datetime.now().strftime("%H:%M:%S"),
                     "nick": nick,
-                    "message": message
+                    "message": message,
+                    "is_ai": False
                 })
                 
+                # Отправляем сообщение всем
                 await broadcast(data)
                 
-                if not config.REAL_RUBAT_ONLINE and ai_enabled and nick != config.YOUR_NICK:
+                # Если это не настоящая Рубать и она не в сети - возможен ответ от бота
+                if not config.REAL_RUBAT_ONLINE and config.AI_ENABLED and nick != config.YOUR_NICK:
                     if random.random() < config.CHANCE_TO_REPLY:
                         await asyncio.sleep(config.RESPONSE_DELAY)
                         await send_ai_response(message, nick)
             
+            # Обработка сообщений без ника
             else:
                 await broadcast(data)
                 
     except Exception as e:
         print(f"Ошибка в WebSocket: {e}")
     finally:
+        # Очистка при отключении
         if websocket in clients:
             clients.discard(websocket)
         
@@ -502,6 +559,7 @@ async def ws_endpoint(websocket: WebSocket):
             nick = user_nicks[websocket]
             active_users.discard(nick)
             
+            # Если это была настоящая Рубать
             if websocket == config.REAL_RUBAT_WEBSOCKET:
                 config.REAL_RUBAT_ONLINE = False
                 config.REAL_RUBAT_WEBSOCKET = None
