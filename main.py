@@ -75,7 +75,7 @@ class AIConfig:
     
     # API ключи
     API_KEYS = {
-        "deepseek": "sk-f4fb5b8681744aaeb8c6248d8daf06bc",
+        "deepseek": "sk-94abb7f70900428782c23f19d01b0dde",
     }
     
     # Настройки ответов
